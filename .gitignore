@@ -1,5 +1,7 @@
 # Virtual Environments
 pyAI3.6
+demoImages
+faceenc
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
