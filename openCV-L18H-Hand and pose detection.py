@@ -37,7 +37,7 @@ class MPHelper:
 
 
 # Parameters
-CAM_ID = 0
+CAM_ID = 1
 CAM_FPS = 30
 CAM_RES = (640, 480)
 
@@ -77,7 +77,7 @@ cv2.resizeWindow(WINDOW_CAMERA_NAME, frameDim[0], frameDim[1])
 handDetection = mp.solutions.hands.Hands(
     static_image_mode=False,
     max_num_hands=2,
-    min_detection_confidence=0.5,
+    min_detection_confidence=0.7,
     min_tracking_confidence=0.5
 )
 
@@ -89,7 +89,7 @@ while True:
 
     frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Cpature hands and add landmarks to frame
+    # Capture hands and add landmarks to frame
     hands = MPHelper.convertMultiHandLandmarksToCoordinates(
         handDetection.process(frameRGB).multi_hand_landmarks,
         frameDim)
