@@ -18,6 +18,7 @@ The lessons have been designed around [Python 3.6.6](https://www.python.org/down
 | cmake            | 3.21.3   | Required to compile dlib. |
 | dlib             | 19.22.1  |                           |
 | face-recognition | 1.3.0    |                           |
+| mediapipe        | 0.8.3    |                           |
 
 Visual Studio may be required to compile `dlib` on Windows. The
 [Community edition](https://visualstudio.microsoft.com/vs/community/) is free.
