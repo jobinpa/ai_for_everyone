@@ -1,16 +1,23 @@
 from random import randint
 import cv2
 import mediapipe as mp
+import numpy as np
 
 print(f'OpenCV version is {cv2.__version__}')
 
 # Parameters
-CAM_ID = 1
+CAM_ID = 0
 CAM_FPS = 30
 CAM_RES = (640, 480)
 
 WINDOW_CAMERA_POS = (0, 0)
 WINDOW_CAMERA_NAME = 'Camera'
+
+HAND_MIN_DETECTION_CONFIDENCE = 0.7
+HAND_MIN_TRACKING_CONFIDENCE = 0.5
+
+GAME_SPEED = 10
+GAME_SPEED_INC_FACTOR = 0.1
 
 
 class Arena:
@@ -29,6 +36,11 @@ class Arena:
     def getLowerRightCorner(self):
         return (self.__dim__[0] - 1, self.__dim__[1] - 1)
 
+    def getWidth(self):
+        return self.__dim__[0]
+
+    def getHeight(self):
+        return self.__dim__[1]
 
 class Ball:
     def __init__(self, radius, color):
@@ -82,6 +94,11 @@ class Paddle:
     def getHeight(self):
         return self.__height__
 
+    def getCenter(self):
+        cx = self.getUpperLeftCorner()[0] + int(self.getWidth() / 2)
+        cy = self.getUpperLeftCorner()[1] + int(self.getHeight() / 2)
+        return (cx, cy)
+
     def getColor(self):
         return self.__color__
 
@@ -97,100 +114,128 @@ class Paddle:
             self.__upperLeftCorner__[1] + self.__height__
         )
 
-
 class Player:
-    def __init__(self):
+    def __init__(self, paddle):
         self.__score__ = 0
         self.__lives__ = 3
+        self.__paddle__ = paddle
 
     def getScore(self):
         return self.__score__
 
     def increaseScore(self):
-        if not self.isGameOver():
-            self.__score__ = self.__score__ + 1
+        self.__score__ = self.__score__ + 1
 
     def getLives(self):
         return self.__lives__
 
     def decreaseLives(self):
-        if not self.isGameOver():
-            self.__lives__ = self.__lives__ - 1
+        self.__lives__ = self.__lives__ - 1
 
-    def isGameOver(self):
-        return self.__lives__ < 1
+    def getPaddle(self):
+        return self.__paddle__
 
 
 class GameEngine:
-    __LEFT__ = 0
-    __TOP__ = 1
-    __RIGHT__ = 2
+    __LEFT_WALL__ = 0
+    __CEILING__ = 1
+    __RIGHT_WALL__ = 2
     __FLOOR__ = 3
 
-    __MIN_VELOCITY__ = 6
-    __MAX_VELOCITY__ = 10
-    __VELOCITY_INC_FACTOR__ = 0.1
-
-    def __init__(self, arena, ball, paddle, player):
+    def __init__(self, arena, ball, player, gameSpeed, gameSpeedIncFactor):
         self.__arena__ = arena
         self.__ball__ = ball
-        self.__paddle__ = paddle
+        self.__paddle__ = player.getPaddle()
         self.__player__ = player
-        self.__isLostLifeAnimationInProgress__ = False
-        ball.setCenter(arena.getCenter())
-        ball.setVelocity(self.__getRandomVelocity__())
-        paddle.setUpperLeftCorner((0, arena.getCenter()[1] - int(paddle.getHeight() / 2)))
+        self.__isBallExploding__ = False
+        self.__gameSpeed__ = gameSpeed
+        self.__velocityIncFactor__ = gameSpeedIncFactor
+        self.__isGameOver__ = False
+        self.__resetPaddle__()
+        self.__serveBall__()
 
-    def setPaddlePosition(self, centerY):
-        if self.__isLostLifeAnimationInProgress__ or self.__player__.isGameOver():
+    def isGameOver(self):
+        return self.__isGameOver__
+
+    def setPaddleYPosition(self, paddle, yPosition):
+        if self.__isBallExploding__ or self.__isGameOver__:
             return
-        arenaTop = self.__arena__.getUpperLeftCorner()[1]
+
+        arenaCeiling = self.__arena__.getUpperLeftCorner()[1]
         arenaFloor = self.__arena__.getLowerRightCorner()[1]
-        paddleTop = centerY - int(self.__paddle__.getHeight() / 2)
+        newPaddleCeiling = yPosition - int(paddle.getHeight() / 2)
+        newPaddleFloor = newPaddleCeiling + paddle.getHeight()
 
-        if paddleTop < arenaTop:
-            paddleTop = arenaTop
-        elif paddleTop + self.__paddle__.getHeight() > arenaFloor:
-            paddleTop = arenaFloor - self.__paddle__.getHeight()
+        if newPaddleCeiling < arenaCeiling:
+            newPaddleCeiling = arenaCeiling
+        elif newPaddleFloor > arenaFloor:
+            newPaddleCeiling = arenaFloor - paddle.getHeight()
 
-        self.__paddle__.setUpperLeftCorner((self.__paddle__.getUpperLeftCorner()[0], paddleTop))
+        paddle.setUpperLeftCorner((paddle.getUpperLeftCorner()[0], newPaddleCeiling))
 
     def tick(self):
-        if self.__isLostLifeAnimationInProgress__:
+        if self.__isBallExploding__:
+            # If ball thickness is -1, we are just starting the animation.
             ballThickness = self.__ball__.getRadius() if self.__ball__.getThickness() < 0 else self.__ball__.getThickness() - 1
-            if ballThickness < 0:
-                self.__isLostLifeAnimationInProgress__ = False
-                self.__ball__.setVelocity(self.__getRandomVelocity__())
-                self.__ball__.setThickness(-1)
-                self.__ball__.setCenter(self.__arena__.getCenter())
-                self.__paddle__.setUpperLeftCorner((0, arena.getCenter()[1] - int(paddle.getHeight() / 2)))
+
+            if ballThickness < 1:
+                self.__isBallExploding__ = False
                 self.__player__.decreaseLives()
+
+                if self.__player__.getLives() < 1:
+                    self.__isGameOver__ = True
+                else:
+                    self.__ball__.setThickness(-1)
+                    self.__resetPaddle__()
+                    self.__serveBall__()
             else:
                 self.__ball__.setThickness(ballThickness)
+                
             return
 
-        if self.__player__.isGameOver():
+        if self.__isGameOver__:
             return
 
         self.__ball__.move()
         collision = self.__detectCollision__()
 
-        if collision[GameEngine.__LEFT__]:
-            self.__handleLeftCollision__()
+        if collision[GameEngine.__LEFT_WALL__]:
+            self.__handleLeftWallCollision__()
 
-        if collision[GameEngine.__TOP__]:
-            self.__handleTopCollision__()
+        if collision[GameEngine.__CEILING__]:
+            self.__handleCeilingCollision__()
 
-        if collision[GameEngine.__RIGHT__]:
-            self.__handleRightCollision__()
+        if collision[GameEngine.__RIGHT_WALL__]:
+            self.__handleRightWallCollision__()
 
         if collision[GameEngine.__FLOOR__]:
             self.__handleFloorCollision__()
 
+    def __deflectBall__(self, paddle):
+        # Increase score and game speed each time the ball is deflected
+        self.__player__.increaseScore()
+        vX = self.__ball__.getVelocity()[0] * -1 * (1 + self.__velocityIncFactor__)        
+
+        # Ball Y-axis velocity is based on where the ball hits the paddle relative
+        # to the paddle center. The hit position is a value between [-1.0, 1.0],
+        # where -1 is the paddle upper-right corner, 0 is the paddle center and
+        # 1 represents the paddle lower-right corner. The new velocity is
+        # REL_DIST_FROM_PADDLE_CENTER * GAME_SPEED. A hit straight at the center of
+        # the paddle would result in a velocity of 0 while a hit at the top or
+        # at the bottom corner would result in a velocity of -GAME_SPEED and
+        # GAME_SPEED respectively.
+        paddleFloor = paddle.getLowerRightCorner()[1]
+        paddleCenter = paddle.getCenter()[1]
+        paddleHalfHeight = float(paddleFloor - paddleCenter)
+        ballCenter = self.__ball__.getCenter()[1]
+        relDistFromPaddleCenter = (ballCenter - paddleCenter) / paddleHalfHeight
+        vY = abs(vX) * relDistFromPaddleCenter
+        self.__ball__.setVelocity((vX, vY))
+
     def __detectCollision__(self):
-        arenaLeft = self.__arena__.getUpperLeftCorner()[0] + self.__paddle__.getWidth()
-        arenaRight = self.__arena__.getLowerRightCorner()[0]
-        arenaTop = self.__arena__.getUpperLeftCorner()[1]
+        arenaLeftWall = self.__arena__.getUpperLeftCorner()[0] + self.__player__.getPaddle().getWidth()
+        arenaRightWall = self.__arena__.getLowerRightCorner()[0]
+        arenaCeiling = self.__arena__.getUpperLeftCorner()[1]
         arenaFloor = self.__arena__.getLowerRightCorner()[1]
 
         ballCenter = self.__ball__.getCenter()
@@ -198,69 +243,69 @@ class GameEngine:
         ballLeft = ballCenter[0] - ballRadius
         ballRight = ballCenter[0] + ballRadius
         ballTop = ballCenter[1] - ballRadius
-        ballFloor = ballCenter[1] + ballRadius
+        ballBottom = ballCenter[1] + ballRadius
 
-        isLeftCollision = True if ballLeft < arenaLeft else False
-        isRightCollision = True if ballRight > arenaRight else False
-        isTopCollision = True if ballTop < arenaTop else False
-        isFloorCollision = True if ballFloor > arenaFloor else False
+        isLeftCollision = True if ballLeft < arenaLeftWall else False
+        isRightCollision = True if ballRight > arenaRightWall else False
+        isTopCollision = True if ballTop < arenaCeiling else False
+        isFloorCollision = True if ballBottom > arenaFloor else False
 
         return (isLeftCollision, isTopCollision, isRightCollision, isFloorCollision)
 
-    def __getRandomVelocity__(self):
-        vX = randint(GameEngine.__MIN_VELOCITY__, GameEngine.__MAX_VELOCITY__)
-        vY = vX
-        # We don't want to ball to be bouncing in diagonal, so we want
-        # vX to be different than vY
-        while vX == vY:
-            vY = randint(GameEngine.__MIN_VELOCITY__, GameEngine.__MAX_VELOCITY__)
-        vY = -1 * vY if randint(0, 1) == 1 else vY
-        return (vX, vY)
+    def __handleLeftWallCollision__(self):
+        arenaLeftWall = self.__arena__.getUpperLeftCorner()[0] + self.__player__.getPaddle().getWidth()
+        ballX = arenaLeftWall + self.__ball__.getRadius() # Don't display ball passed the left wall
+        ballY = self.__ball__.getCenter()[1] 
+        self.__ball__.setCenter((ballX, ballY))
 
-    def __handleLeftCollision__(self):
-        arenaLeft = self.__arena__.getUpperLeftCorner()[0] + self.__paddle__.getWidth()
-
-        ballVelocity = ball.getVelocity()
-        ballCenterY = ball.getCenter()[1]
-        ballRadius = ball.getRadius()
-
-        paddleTopY = self.__paddle__.getUpperLeftCorner()[1]
-        paddleFloorY = self.__paddle__.getLowerRightCorner()[1]
-        hasMissed = ballCenterY < paddleTopY or ballCenterY > paddleFloorY
+        ballCenter = self.__ball__.getCenter()[1]
+        paddleCeiling = self.__player__.getPaddle().getUpperLeftCorner()[1]
+        paddleFloor = self.__player__.getPaddle().getLowerRightCorner()[1]
+        hasMissed = ballCenter < paddleCeiling or ballCenter > paddleFloor
 
         if hasMissed:
-            self.__isLostLifeAnimationInProgress__ = True
+            self.__isBallExploding__ = True
         else:
-            self.__player__.increaseScore()
-            vX = (1 + GameEngine.__VELOCITY_INC_FACTOR__) * ballVelocity[0]
-            vY = (1 + GameEngine.__VELOCITY_INC_FACTOR__) * ballVelocity[1]
-            self.__ball__.setVelocity((vX * -1, vY))
-            self.__ball__.setCenter((arenaLeft + ballRadius, ballCenterY))
+            self.__deflectBall__(self.__player__.getPaddle())
 
-    def __handleRightCollision__(self):
-        arenaRight = self.__arena__.getLowerRightCorner()[0]
-        ballVelocity = ball.getVelocity()
-        ballCenterY = ball.getCenter()[1]
-        ballradius = ball.getRadius()
-        ball.setVelocity((ballVelocity[0] * -1, ballVelocity[1]))
-        ball.setCenter((arenaRight - ballradius, ballCenterY))
+    def __handleRightWallCollision__(self):
+        arenaRightWall = self.__arena__.getLowerRightCorner()[0]
+        ballX = arenaRightWall - self.__ball__.getRadius() # Don't display ball passed the right wall
+        ballY = self.__ball__.getCenter()[1] 
+        self.__ball__.setCenter((ballX, ballY))
+        ballVx = self.__ball__.getVelocity()[0] * -1
+        ballVy = self.__ball__.getVelocity()[1]
+        self.__ball__.setVelocity((ballVx, ballVy))
 
-    def __handleTopCollision__(self):
-        arenaTop = self.__arena__.getUpperLeftCorner()[1]
-        ballVelocity = ball.getVelocity()
-        ballCenterX = ball.getCenter()[0]
-        ballRadius = ball.getRadius()
-        ball.setVelocity((ballVelocity[0], ballVelocity[1] * -1))
-        ball.setCenter((ballCenterX, arenaTop + ballRadius))
+    def __handleCeilingCollision__(self):
+        arenaCeiling = self.__arena__.getUpperLeftCorner()[1]
+        ballX = self.__ball__.getCenter()[0]
+        ballY = arenaCeiling + self.__ball__.getRadius() # Don't display ball passed the ceiling
+        self.__ball__.setCenter((ballX, ballY))
+        ballVx = self.__ball__.getVelocity()[0]
+        ballVy = self.__ball__.getVelocity()[1] * -1
+        self.__ball__.setVelocity((ballVx, ballVy))
 
     def __handleFloorCollision__(self):
         arenaFloor = self.__arena__.getLowerRightCorner()[1]
-        ballVelocity = ball.getVelocity()
-        ballCenterX = ball.getCenter()[0]
-        ballRadius = ball.getRadius()
-        ball.setVelocity((ballVelocity[0], ballVelocity[1] * -1))
-        ball.setCenter((ballCenterX, arenaFloor - ballRadius))
+        ballX = self.__ball__.getCenter()[0]
+        ballY = arenaFloor - self.__ball__.getRadius() # Don't display ball passed the floor
+        self.__ball__.setCenter((ballX, ballY))
+        ballVx = self.__ball__.getVelocity()[0]
+        ballVy = self.__ball__.getVelocity()[1] * -1
+        self.__ball__.setVelocity((ballVx, ballVy))
 
+    def __resetPaddle__(self):
+        self.__player__.getPaddle().setUpperLeftCorner((
+            0, 
+            self.__arena__.getCenter()[1] - int(self.__player__.getPaddle().getHeight() / 2)
+        ))
+
+    def __serveBall__(self):
+        self.__ball__.setCenter(self.__arena__.getCenter())
+        ballVx = self.__gameSpeed__
+        ballVy = randint(self.__gameSpeed__ * -1, self.__gameSpeed__) # *-1 so ball can go either up or down
+        self.__ball__.setVelocity((ballVx, ballVy))
 
 class MPHelper:
     def convertMultiHandLandmarksToCoordinates(multiHandLandmarks, frameDim):
@@ -417,9 +462,9 @@ cv2.resizeWindow(WINDOW_CAMERA_NAME, frameDim[0], frameDim[1])
 # https://google.github.io/mediapipe/solutions/hands.html
 handDetection = mp.solutions.hands.Hands(
     static_image_mode=False,
-    max_num_hands=2,
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.5
+    max_num_hands=1,
+    min_detection_confidence=HAND_MIN_DETECTION_CONFIDENCE,
+    min_tracking_confidence=HAND_MIN_TRACKING_CONFIDENCE
 )
 
 # Game components
@@ -435,6 +480,9 @@ print('Press "q" to quit...')
 while True:
     _, frame = cam.read()
 
+    # Flip frame horizontally so left is left when you look at the screen
+    frame = cv2.flip(frame, 1)
+
     # Try to locate the index finger position
     frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     hands = MPHelper.convertMultiHandLandmarksToCoordinates(
@@ -442,10 +490,15 @@ while True:
         frameDim)
     fingerCoordinates = MPHelper.getIndexFinger(hands[0])[3] if len(hands) else None
 
+    # Add dark overlay
+    darkOverlay = np.zeros((len(frame), len(frame[0]), 3), dtype=np.uint8)
+    alpha = 0.6
+    frame = cv2.addWeighted(frame, alpha, darkOverlay, 1 - alpha, 0.0)
+
     # Display start game / game over components based on the current game state
     if engine == None:
         hotspot = displayStartButton(frame, 0)
-    elif player.isGameOver():
+    elif engine.isGameOver():
         hotspot = displayGameOver(frame)
 
     # If both an hotspot (button) is active and a finger was detected,
@@ -458,20 +511,20 @@ while True:
             arena = Arena(frameDim)
             ball = Ball(radius=int(frameDim[1] * 0.04), color=(0, 0, 255))
             paddle = Paddle(width=int(frameDim[1] * 0.05), height=int(frameDim[1] * 0.2), color=(0, 255, 0))
-            player = Player()
-            engine = GameEngine(arena, ball, paddle, player)
+            player = Player(paddle)
+            engine = GameEngine(arena, ball, player, GAME_SPEED, GAME_SPEED_INC_FACTOR)
             hotspot = None
 
     # If game has been started
     if engine != None:
         if fingerCoordinates != None:
-            engine.setPaddlePosition(fingerCoordinates[1])
+            engine.setPaddleYPosition(player.getPaddle(), fingerCoordinates[1])
 
         engine.tick()
         displayScoreboard(frame, player)
 
         # Ball and paddle are not visible when the game is over
-        if not player.isGameOver():
+        if not engine.isGameOver():
             cv2.circle(frame, ball.getCenter(), ball.getRadius(), ball.getColor(), ball.getThickness())
             # Draw dotted line
             for y in range(0, frameDim[1], 5):
