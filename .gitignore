@@ -3,6 +3,9 @@ pyAI3.6
 demoImages
 faceenc
 
+# VS Code
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
