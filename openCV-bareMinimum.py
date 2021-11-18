@@ -6,6 +6,8 @@ CAM_ID = 0
 CAM_FPS = 30
 CAM_RES = (640, 480)
 
+FLIP_CAMERA_FRAME_HORIZONTALY = True
+
 WINDOW_CAMERA_POS = (0, 0)
 WINDOW_CAMERA_NAME = 'Camera'
 
@@ -35,6 +37,10 @@ print('Press "q" to quit...')
 # Read and display camera capture
 while True:
     _, frame = cam.read()
+
+    if FLIP_CAMERA_FRAME_HORIZONTALY:
+        frame = cv2.flip(frame, 1)
+
     cv2.imshow(WINDOW_CAMERA_NAME, frame)
 
     if cv2.waitKey(1) & 0xff == ord('q'):
