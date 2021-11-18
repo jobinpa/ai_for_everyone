@@ -3,6 +3,23 @@ import mediapipe as mp
 
 print(f'OpenCV version is {cv2.__version__}')
 
+# Parameters
+CAM_ID = 0
+CAM_FPS = 30
+CAM_RES = (640, 480)
+
+FLIP_CAMERA_FRAME_HORIZONTALY = True
+
+WINDOW_CAMERA_POS = (0, 0)
+WINDOW_CAMERA_NAME = 'Camera'
+
+FINGER_COLORS = [
+    (0, 0, 0), (112, 112, 112), (25, 125, 254),
+    (0, 255, 255), (121, 11, 210), (131, 16, 100)
+]
+
+FINGER_MARKER_RADIUS = 10
+
 
 class MPHelper:
     def convertMultiHandLandmarksToCoordinates(multiHandLandmarks, frameDim):
@@ -35,21 +52,6 @@ class MPHelper:
     def getPinky(coordinates):
         return coordinates[17:21]
 
-
-# Parameters
-CAM_ID = 1
-CAM_FPS = 30
-CAM_RES = (640, 480)
-
-WINDOW_CAMERA_POS = (0, 0)
-WINDOW_CAMERA_NAME = 'Camera'
-
-FINGER_COLORS = [
-    (0, 0, 0), (112, 112, 112), (25, 125, 254),
-    (0, 255, 255), (121, 11, 210), (131, 16, 100)
-]
-
-FINGER_MARKER_RADIUS = 10
 
 # Setup camera
 cam = cv2.VideoCapture(CAM_ID, cv2.CAP_DSHOW)
@@ -86,6 +88,15 @@ print('Press "q" to quit...')
 # Read and display camera capture
 while True:
     _, frame = cam.read()
+
+    # MediaPipe assumes the input image is mirrored, i.e., taken with a
+    # front-facing/selfie camera with images flipped horizontally. Some cameras
+    # do this automatically, but most don't. We flip the frame so the right
+    # hand returned by MediaPipe is really the right hand. See the following
+    # link for more details.
+    # https://google.github.io/mediapipe/solutions/hands.html#output
+    if FLIP_CAMERA_FRAME_HORIZONTALY:
+        frame = cv2.flip(frame, 1)
 
     frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
