@@ -1,6 +1,6 @@
 from random import randint
 import cv2
-import mediapipe as mp
+import mediapipehelper as mph
 import numpy as np
 
 print(f'OpenCV version is {cv2.__version__}')
@@ -19,6 +19,7 @@ HAND_MIN_TRACKING_CONFIDENCE = 0.5
 # 640x480 => 13
 # 1280x1024 => 26
 GAME_SPEED = 13
+
 
 class Arena:
     def __init__(self, dim):
@@ -41,6 +42,7 @@ class Arena:
 
     def getHeight(self):
         return self.__dim__[1]
+
 
 class Ball:
     def __init__(self, radius, color):
@@ -188,7 +190,7 @@ class GameEngine:
                 self.__scorer__ = None
             else:
                 self.__ball__.setThickness(ballThickness)
-                
+
             return
 
         if self.__isGameOver__:
@@ -255,8 +257,8 @@ class GameEngine:
 
     def __handleLeftWallCollision__(self):
         arenaLeftWall = self.__arena__.getUpperLeftCorner()[0] + self.__leftPlayer__.getPaddle().getWidth()
-        ballX = arenaLeftWall + self.__ball__.getRadius() # Don't display ball passed the left wall
-        ballY = self.__ball__.getCenter()[1] 
+        ballX = arenaLeftWall + self.__ball__.getRadius()  # Don't display ball passed the left wall
+        ballY = self.__ball__.getCenter()[1]
         self.__ball__.setCenter((ballX, ballY))
 
         ballCenter = self.__ball__.getCenter()[1]
@@ -271,8 +273,8 @@ class GameEngine:
 
     def __handleRightWallCollision__(self):
         arenaRightWall = self.__arena__.getLowerRightCorner()[0] - self.__rightPlayer__.getPaddle().getWidth()
-        ballX = arenaRightWall - self.__ball__.getRadius() # Don't display ball passed the right wall
-        ballY = self.__ball__.getCenter()[1] 
+        ballX = arenaRightWall - self.__ball__.getRadius()  # Don't display ball passed the right wall
+        ballY = self.__ball__.getCenter()[1]
         self.__ball__.setCenter((ballX, ballY))
 
         ballCenter = self.__ball__.getCenter()[1]
@@ -288,7 +290,7 @@ class GameEngine:
     def __handleCeilingCollision__(self):
         arenaCeiling = self.__arena__.getUpperLeftCorner()[1]
         ballX = self.__ball__.getCenter()[0]
-        ballY = arenaCeiling + self.__ball__.getRadius() # Don't display ball passed the ceiling
+        ballY = arenaCeiling + self.__ball__.getRadius()  # Don't display ball passed the ceiling
         self.__ball__.setCenter((ballX, ballY))
         ballVx = self.__ball__.getVelocity()[0]
         ballVy = self.__ball__.getVelocity()[1] * -1
@@ -297,7 +299,7 @@ class GameEngine:
     def __handleFloorCollision__(self):
         arenaFloor = self.__arena__.getLowerRightCorner()[1]
         ballX = self.__ball__.getCenter()[0]
-        ballY = arenaFloor - self.__ball__.getRadius() # Don't display ball passed the floor
+        ballY = arenaFloor - self.__ball__.getRadius()  # Don't display ball passed the floor
         self.__ball__.setCenter((ballX, ballY))
         ballVx = self.__ball__.getVelocity()[0]
         ballVy = self.__ball__.getVelocity()[1] * -1
@@ -305,19 +307,19 @@ class GameEngine:
 
     def __resetPaddles__(self):
         self.__leftPlayer__.getPaddle().setUpperLeftCorner((
-            0, 
+            0,
             self.__arena__.getCenter()[1] - int(self.__leftPlayer__.getPaddle().getHeight() / 2)
         ))
 
         self.__rightPlayer__.getPaddle().setUpperLeftCorner((
-            self.__arena__.getWidth() - self.__rightPlayer__.getPaddle().getWidth(), 
+            self.__arena__.getWidth() - self.__rightPlayer__.getPaddle().getWidth(),
             self.__arena__.getCenter()[1] - int(self.__rightPlayer__.getPaddle().getHeight() / 2)
         ))
 
     def __serveBall__(self):
         self.__ball__.setCenter(self.__arena__.getCenter())
         ballVx = self.__gameSpeed__ * self.__server__
-        ballVy = randint(self.__gameSpeed__ * -1, self.__gameSpeed__) # *-1 so ball can go either up or down
+        ballVy = randint(self.__gameSpeed__ * -1, self.__gameSpeed__)  # *-1 so ball can go either up or down
         self.__ball__.setVelocity((ballVx, ballVy))
 
         # When the left player serves (player 1), the ball is going to the
@@ -326,37 +328,6 @@ class GameEngine:
         # left so the X-Axis velocity direction is -1.
         # We alternate between players
         self.__server__ = self.__server__ * -1
-
-class MPHelper:
-    def convertMultiHandLandmarksToCoordinates(multiHandLandmarks, frameDim):
-        hands = []
-        if multiHandLandmarks != None:
-            for handLandmarks in multiHandLandmarks:
-                coordinates = []
-                for landmark in handLandmarks.landmark:
-                    lx = int(landmark.x * frameDim[0])
-                    ly = int(landmark.y * frameDim[1])
-                    coordinates.append((lx, ly))
-                hands.append(coordinates)
-        return hands
-
-    def getWrist(coordinates):
-        return [coordinates[0]]
-
-    def getThumb(coordinates):
-        return coordinates[1:5]
-
-    def getIndexFinger(coordinates):
-        return coordinates[5:9]
-
-    def getMiddleFinger(coordinates):
-        return coordinates[9:13]
-
-    def getRingFinger(coordinates):
-        return coordinates[13:17]
-
-    def getPinky(coordinates):
-        return coordinates[17:21]
 
 
 def displayGameOver(frame, winner):
@@ -451,6 +422,7 @@ def displayStartButton(frame, yOffset):
 
     return (boxUpperLeftCorner, boxLowerRightCorner)
 
+
 def isWithinRectangle(point, areaUpperLeftCorner, areaLowerRightCorner):
     if point[0] < areaUpperLeftCorner[0] or point[0] > areaLowerRightCorner[0]:
         return False
@@ -458,19 +430,22 @@ def isWithinRectangle(point, areaUpperLeftCorner, areaLowerRightCorner):
         return False
     return True
 
+
 def getLeftPlayerIndex(screenCenterX, hands):
     for h in hands:
-        index = MPHelper.getIndexFinger(h)[3]
+        index = h.getIndexFinger()[3]
         if index[0] < screenCenterX:
             return index
     return None
 
+
 def getRightPlayerIndex(screenCenterX, hands):
     for h in hands:
-        index = MPHelper.getIndexFinger(h)[3]
+        index = h.getIndexFinger()[3]
         if index[0] > screenCenterX:
             return index
     return None
+
 
 # Setup camera
 cam = cv2.VideoCapture(CAM_ID, cv2.CAP_DSHOW)
@@ -495,7 +470,7 @@ cv2.resizeWindow(WINDOW_CAMERA_NAME, frameDim[0], frameDim[1])
 
 # Setup media pipe
 # https://google.github.io/mediapipe/solutions/hands.html
-handDetection = mp.solutions.hands.Hands(
+handDetection = mph.HandDetection(
     static_image_mode=False,
     max_num_hands=2,
     min_detection_confidence=HAND_MIN_DETECTION_CONFIDENCE,
@@ -517,14 +492,11 @@ print('Press "q" to quit...')
 while True:
     _, frame = cam.read()
 
-     # Flip frame horizontally so left is left when you look at the screen
+    # Flip frame horizontally so left is left when you look at the screen
     frame = cv2.flip(frame, 1)
 
     # Try to locate the index finger position
-    frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    hands = MPHelper.convertMultiHandLandmarksToCoordinates(
-        handDetection.process(frameRGB).multi_hand_landmarks,
-        frameDim)
+    hands = handDetection.detectHands(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     leftPlayerFingerCoordinates = getLeftPlayerIndex((frameDim[0] - 1) / 2, hands)
     rightPlayerFingerCoordinates = getRightPlayerIndex((frameDim[0] - 1) / 2, hands)
