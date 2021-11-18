@@ -2,7 +2,7 @@ import cv2
 import random
 print(cv2.__version__)
 
-CAM_ID = 1
+CAM_ID = 0
 CAM_FPS = 30
 
 WINDOW_DIM = (640, 480)

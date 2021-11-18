@@ -1,7 +1,9 @@
 # importing cv2
 import cv2
 
-cam = cv2.VideoCapture(1)
+CAM_ID = 0
+
+cam = cv2.VideoCapture(0)
 
 # showing values of the properties
 print("CV_CAP_PROP_FRAME_WIDTH: '{}'".format(cam.get(cv2.CAP_PROP_FRAME_WIDTH)))

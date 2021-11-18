@@ -1,6 +1,8 @@
 import cv2
 print(cv2.__version__)
 
+CAM_ID = 0
+
 WINDOW_WIDTH = 640
 WINDOW_HEIGHT = 480
 WINDOW_CENTER_X = int(WINDOW_WIDTH / 2) - 1
@@ -32,7 +34,7 @@ TEXT_SCALE = 1
 TEXT_LEFT_LOWER_X = int(0 + WINDOW_WIDTH / 2 - TEXT_WIDTH / 2)
 TEXT_LEFT_LOWER_Y = int(0 + TEXT_HEIGHT)
 
-cam = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cam = cv2.VideoCapture(CAM_ID, cv2.CAP_DSHOW)
 cam.set(cv2.CAP_PROP_FRAME_WIDTH, WINDOW_WIDTH)
 cam.set(cv2.CAP_PROP_FRAME_HEIGHT, WINDOW_HEIGHT)
 cam.set(cv2.CAP_PROP_FPS, 30)

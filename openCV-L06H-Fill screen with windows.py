@@ -1,6 +1,8 @@
 import cv2
 print(cv2.__version__)
 
+CAM_ID = 0
+
 screenScaleFactor = 1.25
 screenWidth = 1920
 screenHeight = 1080
@@ -8,7 +10,7 @@ screenHeight = 1080
 requestedFrameWidth = 160
 requestedFrameHeight = 120
 
-cam = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cam = cv2.VideoCapture(CAM_ID, cv2.CAP_DSHOW)
 cam.set(cv2.CAP_PROP_FRAME_WIDTH, requestedFrameWidth)
 cam.set(cv2.CAP_PROP_FRAME_HEIGHT, requestedFrameHeight)
 cam.set(cv2.CAP_PROP_FPS, 30)

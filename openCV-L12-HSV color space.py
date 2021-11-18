@@ -7,7 +7,7 @@ print(cv2.__version__)
 # Saturation = Whiteness/Color dilution (0 = white, 255 = no white)
 # Value      = Blackiness/Luminosity (0 = black, 255 = no black)
 
-CAM_ID = 1
+CAM_ID = 0
 CAM_FPS = 30
 CAM_RES = (640, 480)
 

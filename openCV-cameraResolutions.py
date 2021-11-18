@@ -1,5 +1,7 @@
 import cv2
 
+CAM_ID = 0
+
 commonResolutions = [
     (16, 16),
     (32, 32),
@@ -220,7 +222,7 @@ commonResolutions = [
 
 supportedResolutions = []
 
-cam = cv2.VideoCapture(1)
+cam = cv2.VideoCapture(CAM_ID)
 
 for r in commonResolutions:
     print(f'{r[0]}x{r[1]}'.ljust(12, ' '), end='')

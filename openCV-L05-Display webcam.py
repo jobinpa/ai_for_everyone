@@ -2,7 +2,9 @@ import cv2
 
 print(cv2.__version__)
 
-cam = cv2.VideoCapture(1)
+CAM_ID = 0
+
+cam = cv2.VideoCapture(CAM_ID)
 
 while True:
     _, frame = cam.read()

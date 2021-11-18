@@ -2,7 +2,7 @@ import cv2
 print(f'OpenCV version is {cv2.__version__}')
 
 # Parameters
-CAM_ID = 1
+CAM_ID = 0
 CAM_FPS = 30
 CAM_RES = (640, 480)
 

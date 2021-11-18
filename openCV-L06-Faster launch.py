@@ -1,10 +1,12 @@
 import cv2
 print(cv2.__version__)
+
+CAM_ID = 0
 width = 320
 height = 180
 
 # Indicates we are capturing video for direct show
-cam = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cam = cv2.VideoCapture(CAM_ID, cv2.CAP_DSHOW)
 cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
 cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 cam.set(cv2.CAP_PROP_FPS, 30)
