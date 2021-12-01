@@ -4,6 +4,18 @@ LEFT_HAND = 0
 RIGHT_HAND = 1
 
 
+class Face:
+    def __init__(self, boxUpperLeft, boxLowerRight):
+        self.__boxUpperLeft__ = boxUpperLeft
+        self.__boxLowerRight__ = boxLowerRight
+
+    def getBoxUpperLeft(self):
+        return self.__boxUpperLeft__
+
+    def getBoxLowerRight(self):
+        return self.__boxLowerRight__
+
+
 class Hand:
     def __init__(self, markers, handedness):
         self.__markers__ = markers
@@ -139,6 +151,33 @@ class Pose:
 
     def getAllMarkers(self):
         return list(self.__markers__)
+
+
+class FaceDetection:
+    def __init__(self, min_detection_confidence=0.5):
+        # https://google.github.io/mediapipe/solutions/face_detection.html
+        self.__mpFaceDetection__ = mp.solutions.face_detection.FaceDetection(
+            min_detection_confidence=min_detection_confidence
+        )
+
+    def detectFaces(self, frameRGB):
+        dimY = len(frameRGB)
+        dimX = 0 if dimY == 0 else len(frameRGB[0])
+        mpFaceDetectionOuput = self.__mpFaceDetection__.process(frameRGB)
+        faces = []
+        if mpFaceDetectionOuput.detections != None:
+            for f in mpFaceDetectionOuput.detections:
+                bbox = f.location_data.relative_bounding_box
+                topLeft = (
+                    int(bbox.xmin * dimX),
+                    int(bbox.ymin * dimY)
+                )
+                bottomRight = (
+                    int((bbox.xmin + bbox.width) * dimX),
+                    int((bbox.ymin + bbox.height) * dimY)
+                )
+                faces.append(Face(topLeft, bottomRight))
+        return faces
 
 
 class HandDetection:
