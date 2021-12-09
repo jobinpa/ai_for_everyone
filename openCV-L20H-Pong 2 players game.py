@@ -433,7 +433,7 @@ def isWithinRectangle(point, areaUpperLeftCorner, areaLowerRightCorner):
 
 def getLeftPlayerIndex(screenCenterX, hands):
     for h in hands:
-        index = h.getIndexFinger()[3]
+        index = h.getLandmarks(mph.HAND_REGION_INDEX_FINGER)[3]
         if index[0] < screenCenterX:
             return index
     return None
@@ -441,7 +441,7 @@ def getLeftPlayerIndex(screenCenterX, hands):
 
 def getRightPlayerIndex(screenCenterX, hands):
     for h in hands:
-        index = h.getIndexFinger()[3]
+        index = h.getLandmarks(mph.HAND_REGION_INDEX_FINGER)[3]
         if index[0] > screenCenterX:
             return index
     return None

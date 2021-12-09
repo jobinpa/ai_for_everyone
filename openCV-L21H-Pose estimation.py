@@ -4,7 +4,7 @@ import mediapipehelper as mph
 print(f'OpenCV version is {cv2.__version__}')
 
 # Parameters
-CAM_ID = 1
+CAM_ID = 0
 CAM_FPS = 30
 CAM_RES = (1280, 1024)
 
@@ -58,7 +58,7 @@ while True:
     pose = poseDetection.detectPose(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     if pose != None:
-        for m in pose.getAllMarkers():
+        for m in pose.getAllLandmarks():
             cv2.circle(frame, m, DOT_RADIUS, FRAME_COLOR, -1)
 
         cv2.line(frame, pose.getRightEar(), pose.getRightEyeOuter(), FRAME_COLOR, LINE_WIDTH)

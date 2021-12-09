@@ -1,5 +1,5 @@
 import cv2
-import mediapipe as mp
+import mediapipehelper as mph
 
 print(f'OpenCV version is {cv2.__version__}')
 
@@ -19,39 +19,6 @@ FINGER_COLORS = [
 ]
 
 FINGER_MARKER_RADIUS = 10
-
-
-class MPHelper:
-    def convertMultiHandLandmarksToCoordinates(multiHandLandmarks, frameDim):
-        hands = []
-        if multiHandLandmarks != None:
-            for handLandmarks in multiHandLandmarks:
-                coordinates = []
-                for landmark in handLandmarks.landmark:
-                    lx = int(landmark.x * frameDim[0])
-                    ly = int(landmark.y * frameDim[1])
-                    coordinates.append((lx, ly))
-                hands.append(coordinates)
-        return hands
-
-    def getWrist(coordinates):
-        return [coordinates[0]]
-
-    def getThumb(coordinates):
-        return coordinates[1:5]
-
-    def getIndexFinger(coordinates):
-        return coordinates[5:9]
-
-    def getMiddleFinger(coordinates):
-        return coordinates[9:13]
-
-    def getRingFinger(coordinates):
-        return coordinates[13:17]
-
-    def getPinky(coordinates):
-        return coordinates[17:21]
-
 
 # Setup camera
 cam = cv2.VideoCapture(CAM_ID, cv2.CAP_DSHOW)
@@ -76,7 +43,7 @@ cv2.resizeWindow(WINDOW_CAMERA_NAME, frameDim[0], frameDim[1])
 
 # Setup media pipe
 # https://google.github.io/mediapipe/solutions/hands.html
-handDetection = mp.solutions.hands.Hands(
+handDetection = mph.HandDetection(
     static_image_mode=False,
     max_num_hands=2,
     min_detection_confidence=0.7,
@@ -98,25 +65,21 @@ while True:
     if FLIP_CAMERA_FRAME_HORIZONTALY:
         frame = cv2.flip(frame, 1)
 
-    frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
     # Capture hands and add landmarks to frame
-    hands = MPHelper.convertMultiHandLandmarksToCoordinates(
-        handDetection.process(frameRGB).multi_hand_landmarks,
-        frameDim)
+    hands = handDetection.detectHands(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     for h in hands:
-        for p in MPHelper.getWrist(h):
+        for p in h.getLandmarks(mph.HAND_REGION_WRIST):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[0], thickness=cv2.FILLED)
-        for p in MPHelper.getThumb(h):
+        for p in h.getLandmarks(mph.HAND_REGION_THUMB):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[1], thickness=cv2.FILLED)
-        for p in MPHelper.getIndexFinger(h):
+        for p in h.getLandmarks(mph.HAND_REGION_INDEX_FINGER):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[2], thickness=cv2.FILLED)
-        for p in MPHelper.getMiddleFinger(h):
+        for p in h.getLandmarks(mph.HAND_REGION_MIDDLE_FINGER):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[3], thickness=cv2.FILLED)
-        for p in MPHelper.getRingFinger(h):
+        for p in h.getLandmarks(mph.HAND_REGION_RING_FINGER):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[4], thickness=cv2.FILLED)
-        for p in MPHelper.getPinky(h):
+        for p in h.getLandmarks(mph.HAND_REGION_PINKY):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[5], thickness=cv2.FILLED)
 
     cv2.imshow(WINDOW_CAMERA_NAME, frame)

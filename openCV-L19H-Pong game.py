@@ -1,6 +1,6 @@
 from random import randint
 import cv2
-import mediapipe as mp
+import mediapipehelper as mph
 import numpy as np
 
 print(f'OpenCV version is {cv2.__version__}')
@@ -41,6 +41,7 @@ class Arena:
 
     def getHeight(self):
         return self.__dim__[1]
+
 
 class Ball:
     def __init__(self, radius, color):
@@ -113,6 +114,7 @@ class Paddle:
             self.__upperLeftCorner__[0] + self.__width__,
             self.__upperLeftCorner__[1] + self.__height__
         )
+
 
 class Player:
     def __init__(self, paddle):
@@ -190,7 +192,7 @@ class GameEngine:
                     self.__serveBall__()
             else:
                 self.__ball__.setThickness(ballThickness)
-                
+
             return
 
         if self.__isGameOver__:
@@ -214,7 +216,7 @@ class GameEngine:
     def __deflectBall__(self, paddle):
         # Increase score and game speed each time the ball is deflected
         self.__player__.increaseScore()
-        vX = self.__ball__.getVelocity()[0] * -1 * (1 + self.__velocityIncFactor__)        
+        vX = self.__ball__.getVelocity()[0] * -1 * (1 + self.__velocityIncFactor__)
 
         # Ball Y-axis velocity is based on where the ball hits the paddle relative
         # to the paddle center. The hit position is a value between [-1.0, 1.0],
@@ -254,8 +256,8 @@ class GameEngine:
 
     def __handleLeftWallCollision__(self):
         arenaLeftWall = self.__arena__.getUpperLeftCorner()[0] + self.__player__.getPaddle().getWidth()
-        ballX = arenaLeftWall + self.__ball__.getRadius() # Don't display ball passed the left wall
-        ballY = self.__ball__.getCenter()[1] 
+        ballX = arenaLeftWall + self.__ball__.getRadius()  # Don't display ball passed the left wall
+        ballY = self.__ball__.getCenter()[1]
         self.__ball__.setCenter((ballX, ballY))
 
         ballCenter = self.__ball__.getCenter()[1]
@@ -270,8 +272,8 @@ class GameEngine:
 
     def __handleRightWallCollision__(self):
         arenaRightWall = self.__arena__.getLowerRightCorner()[0]
-        ballX = arenaRightWall - self.__ball__.getRadius() # Don't display ball passed the right wall
-        ballY = self.__ball__.getCenter()[1] 
+        ballX = arenaRightWall - self.__ball__.getRadius()  # Don't display ball passed the right wall
+        ballY = self.__ball__.getCenter()[1]
         self.__ball__.setCenter((ballX, ballY))
         ballVx = self.__ball__.getVelocity()[0] * -1
         ballVy = self.__ball__.getVelocity()[1]
@@ -280,7 +282,7 @@ class GameEngine:
     def __handleCeilingCollision__(self):
         arenaCeiling = self.__arena__.getUpperLeftCorner()[1]
         ballX = self.__ball__.getCenter()[0]
-        ballY = arenaCeiling + self.__ball__.getRadius() # Don't display ball passed the ceiling
+        ballY = arenaCeiling + self.__ball__.getRadius()  # Don't display ball passed the ceiling
         self.__ball__.setCenter((ballX, ballY))
         ballVx = self.__ball__.getVelocity()[0]
         ballVy = self.__ball__.getVelocity()[1] * -1
@@ -289,7 +291,7 @@ class GameEngine:
     def __handleFloorCollision__(self):
         arenaFloor = self.__arena__.getLowerRightCorner()[1]
         ballX = self.__ball__.getCenter()[0]
-        ballY = arenaFloor - self.__ball__.getRadius() # Don't display ball passed the floor
+        ballY = arenaFloor - self.__ball__.getRadius()  # Don't display ball passed the floor
         self.__ball__.setCenter((ballX, ballY))
         ballVx = self.__ball__.getVelocity()[0]
         ballVy = self.__ball__.getVelocity()[1] * -1
@@ -297,46 +299,15 @@ class GameEngine:
 
     def __resetPaddle__(self):
         self.__player__.getPaddle().setUpperLeftCorner((
-            0, 
+            0,
             self.__arena__.getCenter()[1] - int(self.__player__.getPaddle().getHeight() / 2)
         ))
 
     def __serveBall__(self):
         self.__ball__.setCenter(self.__arena__.getCenter())
         ballVx = self.__gameSpeed__
-        ballVy = randint(self.__gameSpeed__ * -1, self.__gameSpeed__) # *-1 so ball can go either up or down
+        ballVy = randint(self.__gameSpeed__ * -1, self.__gameSpeed__)  # *-1 so ball can go either up or down
         self.__ball__.setVelocity((ballVx, ballVy))
-
-class MPHelper:
-    def convertMultiHandLandmarksToCoordinates(multiHandLandmarks, frameDim):
-        hands = []
-        if multiHandLandmarks != None:
-            for handLandmarks in multiHandLandmarks:
-                coordinates = []
-                for landmark in handLandmarks.landmark:
-                    lx = int(landmark.x * frameDim[0])
-                    ly = int(landmark.y * frameDim[1])
-                    coordinates.append((lx, ly))
-                hands.append(coordinates)
-        return hands
-
-    def getWrist(coordinates):
-        return [coordinates[0]]
-
-    def getThumb(coordinates):
-        return coordinates[1:5]
-
-    def getIndexFinger(coordinates):
-        return coordinates[5:9]
-
-    def getMiddleFinger(coordinates):
-        return coordinates[9:13]
-
-    def getRingFinger(coordinates):
-        return coordinates[13:17]
-
-    def getPinky(coordinates):
-        return coordinates[17:21]
 
 
 def displayGameOver(frame):
@@ -460,7 +431,7 @@ cv2.resizeWindow(WINDOW_CAMERA_NAME, frameDim[0], frameDim[1])
 
 # Setup media pipe
 # https://google.github.io/mediapipe/solutions/hands.html
-handDetection = mp.solutions.hands.Hands(
+handDetection = mph.HandDetection(
     static_image_mode=False,
     max_num_hands=1,
     min_detection_confidence=HAND_MIN_DETECTION_CONFIDENCE,
@@ -484,11 +455,8 @@ while True:
     frame = cv2.flip(frame, 1)
 
     # Try to locate the index finger position
-    frameRGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    hands = MPHelper.convertMultiHandLandmarksToCoordinates(
-        handDetection.process(frameRGB).multi_hand_landmarks,
-        frameDim)
-    fingerCoordinates = MPHelper.getIndexFinger(hands[0])[3] if len(hands) else None
+    hands = handDetection.detectHands(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    fingerCoordinates = hands[0].getLandmarks(mph.HAND_REGION_INDEX_FINGER)[3] if len(hands) else None
 
     # Add dark overlay
     darkOverlay = np.zeros((len(frame), len(frame[0]), 3), dtype=np.uint8)

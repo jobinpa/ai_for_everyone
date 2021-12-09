@@ -1,5 +1,5 @@
 import cv2
-import mediapipe as mp
+import mediapipehelper as mph
 
 print(f'OpenCV version is {cv2.__version__}')
 
@@ -22,85 +22,18 @@ FINGER_COLORS = [
 
 FINGER_MARKER_RADIUS = 10
 
-LEFT_HAND = 0
-RIGHT_HAND = 1
-
-
-class Hand:
-    def __init__(self, markers, handedness):
-        self.__markers__ = markers
-        self.__handedness__ = handedness
-
-    def getWrist(self):
-        return [self.__markers__[0]]
-
-    def getThumb(self):
-        return self.__markers__[1:5]
-
-    def getIndexFinger(self):
-        return self.__markers__[5:9]
-
-    def getMiddleFinger(self):
-        return self.__markers__[9:13]
-
-    def getRingFinger(self):
-        return self.__markers__[13:17]
-
-    def getPinky(self):
-        return self.__markers__[17:21]
-
-    def getHandedness(self):
-        return self.__handedness__
-
-
-class HandDetection:
-    def __init__(self, static_image_mode=False, max_num_hands=-1,
-                 min_detection_confidence=0.5, min_tracking_confidence=0.5):
-        # Setup media pipe
-        # https://google.github.io/mediapipe/solutions/hands.html
-        self.__mpHandDetection__ = mp.solutions.hands.Hands(
-            static_image_mode=static_image_mode,
-            max_num_hands=max_num_hands,
-            min_detection_confidence=min_detection_confidence,
-            min_tracking_confidence=min_tracking_confidence
-        )
-
-    def detectHands(self, frameRGB):
-        dimY = len(frameRGB)
-        dimX = 0 if dimY == 0 else len(frameRGB[0])
-        frameDimensions = (dimX, dimY)
-
-        hands = []
-
-        mediaPipeHandDetectionOutput = self.__mpHandDetection__.process(frameRGB)
-        multiHandLandmarks = mediaPipeHandDetectionOutput.multi_hand_landmarks
-        multiHandedness = mediaPipeHandDetectionOutput.multi_handedness
-
-        if multiHandLandmarks != None:
-            for i in range(0, len(multiHandLandmarks)):
-                rawLandmarks = multiHandLandmarks[i]
-                rawHandedness = multiHandedness[i].classification[0].index
-                markers = []
-                for landmark in rawLandmarks.landmark:
-                    lx = int(landmark.x * frameDimensions[0])
-                    ly = int(landmark.y * frameDimensions[1])
-                    markers.append((lx, ly))
-                hands.append(Hand(markers, rawHandedness))
-
-        return hands
-
 
 def printHandSide(frame, hand):
-    wrist = hand.getWrist()
+    wrist = hand.getLandmarks(mph.HAND_REGION_WRIST)
     TEXT_FONT = cv2.FONT_HERSHEY_COMPLEX
     TEXT_COLOR = (0, 0, 255)
     TEXT_THICKNESS = 1
     TEXT_SCALE = 1
     text = None
 
-    if hand.getHandedness() == LEFT_HAND:
+    if hand.getHandedness() == mph.HANDENESS_LEFT:
         text = 'Left'
-    elif hand.getHandedness() == RIGHT_HAND:
+    elif hand.getHandedness() == mph.HANDENESS_RIGHT:
         text = 'Right'
     else:
         text = '???'
@@ -134,7 +67,7 @@ cv2.resizeWindow(WINDOW_CAMERA_NAME, frameDim[0], frameDim[1])
 
 # Setup media pipe
 # https://google.github.io/mediapipe/solutions/hands.html
-handDetection = HandDetection(
+handDetection = mph.HandDetection(
     static_image_mode=False,
     max_num_hands=2,
     min_detection_confidence=HAND_MIN_DETECTION_CONFIDENCE,
@@ -154,17 +87,17 @@ while True:
     hands = handDetection.detectHands(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     for h in hands:
-        for p in h.getWrist():
+        for p in h.getLandmarks(mph.HAND_REGION_WRIST):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[0], thickness=cv2.FILLED)
-        for p in h.getThumb():
+        for p in h.getLandmarks(mph.HAND_REGION_THUMB):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[1], thickness=cv2.FILLED)
-        for p in h.getIndexFinger():
+        for p in h.getLandmarks(mph.HAND_REGION_INDEX_FINGER):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[2], thickness=cv2.FILLED)
-        for p in h.getMiddleFinger():
+        for p in h.getLandmarks(mph.HAND_REGION_MIDDLE_FINGER):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[3], thickness=cv2.FILLED)
-        for p in h.getRingFinger():
+        for p in h.getLandmarks(mph.HAND_REGION_RING_FINGER):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[4], thickness=cv2.FILLED)
-        for p in h.getPinky():
+        for p in h.getLandmarks(mph.HAND_REGION_PINKY):
             cv2.circle(frame, center=p, radius=FINGER_MARKER_RADIUS, color=FINGER_COLORS[5], thickness=cv2.FILLED)
         printHandSide(frame, h)
 
