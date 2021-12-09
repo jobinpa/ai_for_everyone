@@ -44,6 +44,41 @@ FACEMESH_REGION_NOSE_LEFT_CORNER = 28
 FACEMESH_REGION_RIGHT_CHEEK = 29
 FACEMESH_REGION_LEFT_CHEEK = 30
 
+POSE_REGION_ALL = 0
+POSE_REGION_NOSE = 1
+POSE_REGION_LEFT_EYE_INNER = 2
+POSE_REGION_LEFT_EYE = 3
+POSE_REGION_LEFT_EYE_OUTER = 4
+POSE_REGION_RIGHT_EYE_INNER = 5
+POSE_REGION_RIGHT_EYE = 6
+POSE_REGION_RIGHT_EYE_OUTER = 7
+POSE_REGION_LEFT_EAR = 8
+POSE_REGION_RIGHT_EAR = 9
+POSE_REGION_MOUTH_LEFT = 10
+POSE_REGION_MOUTH_RIGHT = 11
+POSE_REGION_LEFT_SHOULDER = 12
+POSE_REGION_RIGHT_SHOULDER = 13
+POSE_REGION_LEFT_ELBOW = 14
+POSE_REGION_RIGHT_ELBOW = 15
+POSE_REGION_LEFT_WRIST = 16
+POSE_REGION_RIGHT_WRIST = 17
+POSE_REGION_LEFT_PINKY = 18
+POSE_REGION_RIGHT_PINKY = 19
+POSE_REGION_LEFT_INDEX = 20
+POSE_REGION_RIGHT_INDEX = 21
+POSE_REGION_LEFT_THUMB = 22
+POSE_REGION_RIGHT_THUMB = 23
+POSE_REGION_LEFT_HIP = 24
+POSE_REGION_RIGHT_HIP = 25
+POSE_REGION_LEFT_KNEE = 26
+POSE_REGION_RIGHT_KNEE = 27
+POSE_REGION_LEFT_ANKLE = 28
+POSE_REGION_RIGHT_ANKLE = 29
+POSE_REGION_LEFT_HEEL = 30
+POSE_REGION_RIGHT_HEEL = 31
+POSE_REGION_LEFT_FOOT = 32
+POSE_REGION_RIGHT_FOOT = 33
+
 
 class Face:
     def __init__(self, boxUpperLeft, boxLowerRight):
@@ -153,110 +188,61 @@ class Hand:
 
 
 class Pose:
+    __regionIndexes__ = {
+        POSE_REGION_ALL: range(0, 33),
+        POSE_REGION_NOSE: [0],
+        POSE_REGION_LEFT_EYE_INNER: [1],
+        POSE_REGION_LEFT_EYE: [2],
+        POSE_REGION_LEFT_EYE_OUTER: [3],
+        POSE_REGION_RIGHT_EYE_INNER: [4],
+        POSE_REGION_RIGHT_EYE: [5],
+        POSE_REGION_RIGHT_EYE_OUTER: [6],
+        POSE_REGION_LEFT_EAR: [7],
+        POSE_REGION_RIGHT_EAR: [8],
+        POSE_REGION_MOUTH_LEFT: [9],
+        POSE_REGION_MOUTH_RIGHT: [10],
+        POSE_REGION_LEFT_SHOULDER: [11],
+        POSE_REGION_RIGHT_SHOULDER: [12],
+        POSE_REGION_LEFT_ELBOW: [13],
+        POSE_REGION_RIGHT_ELBOW: [14],
+        POSE_REGION_LEFT_WRIST: [15],
+        POSE_REGION_RIGHT_WRIST: [16],
+        POSE_REGION_LEFT_PINKY: [17],
+        POSE_REGION_RIGHT_PINKY: [18],
+        POSE_REGION_LEFT_INDEX: [19],
+        POSE_REGION_RIGHT_INDEX: [20],
+        POSE_REGION_LEFT_THUMB: [21],
+        POSE_REGION_RIGHT_THUMB: [22],
+        POSE_REGION_LEFT_HIP: [23],
+        POSE_REGION_RIGHT_HIP: [24],
+        POSE_REGION_LEFT_KNEE: [25],
+        POSE_REGION_RIGHT_KNEE: [26],
+        POSE_REGION_LEFT_ANKLE: [27],
+        POSE_REGION_RIGHT_ANKLE: [28],
+        POSE_REGION_LEFT_HEEL: [29],
+        POSE_REGION_RIGHT_HEEL: [30],
+        POSE_REGION_LEFT_FOOT: [31],
+        POSE_REGION_RIGHT_FOOT: [32]
+    }
+
     def __init__(self, landmarks):
         self.__landmarks__ = landmarks
 
-    def getNose(self):
-        return self.__landmarks__[0]
+    def getLandmarks(self, *regions):
+        landmarkIndices = set()
 
-    def getLeftEyeInner(self):
-        return self.__landmarks__[1]
+        if (len(regions) == 0):
+            for i in Pose.__regionIndexes__[HAND_REGION_ALL]:
+                landmarkIndices.add(i)
+        else:
+            for r in regions:
+                for i in Pose.__regionIndexes__[r]:
+                    landmarkIndices.add(i)
 
-    def getLeftEye(self):
-        return self.__landmarks__[2]
-
-    def getLeftEyeOuter(self):
-        return self.__landmarks__[3]
-
-    def getRightEyeInner(self):
-        return self.__landmarks__[4]
-
-    def getRightEye(self):
-        return self.__landmarks__[5]
-
-    def getRightEyeOuter(self):
-        return self.__landmarks__[6]
-
-    def getLeftEar(self):
-        return self.__landmarks__[7]
-
-    def getRightEar(self):
-        return self.__landmarks__[8]
-
-    def getMouthLeft(self):
-        return self.__landmarks__[9]
-
-    def getMouthRight(self):
-        return self.__landmarks__[10]
-
-    def getLeftShoulder(self):
-        return self.__landmarks__[11]
-
-    def getRightShoulder(self):
-        return self.__landmarks__[12]
-
-    def getLeftElbow(self):
-        return self.__landmarks__[13]
-
-    def getRightElbow(self):
-        return self.__landmarks__[14]
-
-    def getLeftWrist(self):
-        return self.__landmarks__[15]
-
-    def getRightWrist(self):
-        return self.__landmarks__[16]
-
-    def getLeftPinky(self):
-        return self.__landmarks__[17]
-
-    def getRightPinky(self):
-        return self.__landmarks__[18]
-
-    def getLeftIndex(self):
-        return self.__landmarks__[19]
-
-    def getRightIndex(self):
-        return self.__landmarks__[20]
-
-    def getLeftThumb(self):
-        return self.__landmarks__[21]
-
-    def getRightThumb(self):
-        return self.__landmarks__[22]
-
-    def getLeftHip(self):
-        return self.__landmarks__[23]
-
-    def getRightHip(self):
-        return self.__landmarks__[24]
-
-    def getLeftKnee(self):
-        return self.__landmarks__[25]
-
-    def getRightKnee(self):
-        return self.__landmarks__[26]
-
-    def getLeftAnkle(self):
-        return self.__landmarks__[27]
-
-    def getRightAnkle(self):
-        return self.__landmarks__[28]
-
-    def getLeftHeel(self):
-        return self.__landmarks__[29]
-
-    def getRightHeel(self):
-        return self.__landmarks__[30]
-
-    def getLeftFootIndex(self):
-        return self.__landmarks__[31]
-
-    def getRightFootIndex(self):
-        return self.__landmarks__[32]
-
-    def getAllLandmarks(self):
-        return list(self.__landmarks__)
+        arr = []
+        for i in set(landmarkIndices):
+            arr.append(self.__landmarks__[i])
+        return arr
 
 
 class FaceDetection:
